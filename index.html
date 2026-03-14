@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accessio — UCL Access Request System</title>
+<style>
+  :root {
+    --ucl-purple: #500778;
+    --ucl-purple-light: #6a1a8a;
+    --ucl-purple-pale: #EDE7F6;
+    --ucl-grey-bg: #F5F5F5;
+    --ucl-grey-border: #D9D9D9;
+    --ucl-grey-text: #555;
+    --ucl-black: #1a1a1a;
+    --green: #2E7D32;
+    --green-bg: #E8F5E9;
+    --amber: #E65100;
+    --amber-bg: #FFF3E0;
+    --red: #C62828;
+    --red-bg: #FFEBEE;
+    --white: #ffffff;
+    --font-main: 'Georgia', serif;
+    --font-ui: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: #EEEAF2;
+    min-height: 100vh;
+    color: var(--ucl-black);
+  }
+
+  /* ── SHELL ── */
+  .shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── TOP NAV (simulates UCL bar) ── */
+  .ucl-topbar {
+    background: var(--ucl-purple);
+    color: white;
+    padding: 0 24px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  .ucl-topbar-logo {
+    font-family: var(--font-main);
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  .ucl-topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    opacity: 0.9;
+  }
+  .ucl-topbar-user .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: bold;
+  }
+
+  /* ── SCREEN NAV (prototype switcher) ── */
+  .proto-nav {
+    background: white;
+    border-bottom: 2px solid var(--ucl-purple);
+    padding: 0 24px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .proto-nav-btn {
+    padding: 12px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font-ui);
+    color: var(--ucl-grey-text);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .proto-nav-btn:hover { color: var(--ucl-purple); }
+  .proto-nav-btn.active {
+    color: var(--ucl-purple);
+    border-bottom-color: var(--ucl-purple);
+    font-weight: 600;
+  }
+  .proto-nav-label {
+    font-size: 10px;
+    font-weight: normal;
+    display: block;
+    color: #999;
+    margin-top: 2px;
+  }
+
+  /* ── SCREEN CONTAINER ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── CARD ── */
+  .card {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+    overflow: hidden;
+    margin-top: 20px;
+  }
+  .card-header {
+    background: var(--ucl-purple);
+    color: white;
+    padding: 16px 24px;
+  }
+  .card-header h2 {
+    font-family: var(--font-main);
+    font-size: 18px;
+    font-weight: normal;
+    letter-spacing: 0.01em;
+  }
+  .card-header p {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 4px;
+  }
+  .card-body { padding: 24px; }
+
+  /* ── PROGRESS INDICATOR ── */
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 28px;
+    padding: 16px 24px 0;
+  }
+  .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    font-size: 11px;
+    color: #aaa;
+  }
+  .progress-step::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 0;
+  }
+  .progress-step:last-child::before { display: none; }
+  .progress-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: #999;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 6px;
+  }
+  .progress-step.done .progress-dot {
+    background: var(--green);
+    color: white;
+  }
+  .progress-step.done { color: var(--green); }
+  .progress-step.active .progress-dot {
+    background: var(--ucl-purple);
+    color: white;
+  }
+  .progress-step.active { color: var(--ucl-purple); font-weight: 600; }
+  .progress-step.done::before { background: var(--green); }
+
+  /* ── SSO BANNER ── */
+  .sso-banner {
+    background: var(--ucl-purple-pale);
+    border: 1px solid rgba(80,7,120,0.2);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--ucl-purple);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .sso-banner .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+
+  /* ── FORM ELEMENTS ── */
+  .form-group { margin-bottom: 20px; }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ucl-black);
+    margin-bottom: 6px;
+  }
+  .form-label span.req { color: var(--red); margin-left: 2px; }
+  .form-hint {
+    font-size: 11px;
+    color: var(--ucl-grey-text);
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+
+  select, textarea, input[type="text"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: var(--font-ui);
+    color: var(--ucl-black);
+    background: white;
+    appearance: none;
+    transition: border-color 0.15s;
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23500778' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  select:focus, textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--ucl-purple);
+    box-shadow: 0 0 0 3px rgba(80,7,120,0.08);
+  }
+
+  /* ── RADIO GROUP ── */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .radio-option:hover { border-color: var(--ucl-purple); background: var(--ucl-purple-pale); }
+  .radio-option.selected { border-color: var(--ucl-purple); background: var(--ucl-purple-pale); }
+  .radio-option input[type="radio"] {
+    width: auto; margin-top: 2px; accent-color: var(--ucl-purple); cursor: pointer;
+  }
+  .radio-option-text strong { font-size: 13px; display: block; }
+  .radio-option-text span { font-size: 11px; color: var(--ucl-grey-text); }
+
+  /* ── ALERT BOX ── */
+  .alert {
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+  .alert-amber { background: var(--amber-bg); border: 1px solid #FFCC80; color: #5D2E00; }
+  .alert-green  { background: var(--green-bg); border: 1px solid #A5D6A7; color: #1B5E20; }
+  .alert-red    { background: var(--red-bg);   border: 1px solid #EF9A9A; color: var(--red); }
+  .alert-purple { background: var(--ucl-purple-pale); border: 1px solid rgba(80,7,120,0.2); color: var(--ucl-purple); }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--ucl-grey-border);
+    border-radius: 4px;
+    padding: 18px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ucl-grey-text);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--ucl-grey-bg);
+  }
+  .upload-zone:hover { border-color: var(--ucl-purple); background: var(--ucl-purple-pale); }
+  .upload-zone .upload-icon { font-size: 22px; margin-bottom: 6px; }
+
+  /* ── DECLARATION ── */
+  .declaration-box {
+    background: var(--ucl-grey-bg);
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ucl-black);
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ucl-grey-border);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: auto;
+    margin-top: 2px;
+    accent-color: var(--ucl-purple);
+    cursor: pointer;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 10px 24px;
+    border-radius: 4px;
+    border: none;
+    font-size: 14px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-primary {
+    background: var(--ucl-purple);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--ucl-purple-light); }
+  .btn-primary:disabled {
+    background: #C5A8D4;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .btn-secondary {
+    background: white;
+    color: var(--ucl-purple);
+    border: 1px solid var(--ucl-purple);
+  }
+  .btn-secondary:hover { background: var(--ucl-purple-pale); }
+  .btn-approve {
+    background: var(--green);
+    color: white;
+    padding: 10px 28px;
+  }
+  .btn-approve:hover { background: #1B5E20; }
+  .btn-reject {
+    background: white;
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 10px 28px;
+  }
+  .btn-reject:hover { background: var(--red-bg); }
+  .btn-export {
+    background: var(--ucl-grey-bg);
+    color: var(--ucl-black);
+    border: 1px solid var(--ucl-grey-border);
+    font-size: 12px;
+    padding: 8px 16px;
+  }
+  .btn-export:hover { background: var(--ucl-purple-pale); border-color: var(--ucl-purple); color: var(--ucl-purple); }
+
+  /* ── REVIEW TIME / REF ── */
+  .meta-row {
+    font-size: 11px;
+    color: var(--ucl-grey-text);
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  /* ── SCREEN 2: ELIGIBILITY ── */
+  .eligibility-panel {
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .elig-header {
+    background: var(--ucl-grey-bg);
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ucl-grey-text);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--ucl-grey-border);
+  }
+  .elig-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--ucl-grey-border);
+    font-size: 13px;
+  }
+  .elig-field:last-child { border-bottom: none; }
+  .elig-field-label { color: var(--ucl-grey-text); font-size: 12px; }
+  .elig-field-value { font-weight: 600; }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-badge.green { background: var(--green-bg); color: var(--green); border: 1px solid #A5D6A7; }
+  .status-badge.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid #FFCC80; }
+  .status-badge.red   { background: var(--red-bg); color: var(--red); border: 1px solid #EF9A9A; }
+  .status-badge .dot  { width: 7px; height: 7px; border-radius: 50%; }
+  .status-badge.green .dot { background: var(--green); }
+  .status-badge.amber .dot { background: var(--amber); }
+  .status-badge.red .dot   { background: var(--red); }
+
+  .ref-box {
+    background: var(--ucl-purple);
+    color: white;
+    border-radius: 6px;
+    padding: 16px 20px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .ref-box .ref-label { font-size: 11px; opacity: 0.75; letter-spacing: 0.06em; text-transform: uppercase; }
+  .ref-box .ref-number { font-size: 22px; font-family: var(--font-main); letter-spacing: 0.08em; margin-top: 4px; }
+
+  /* ── SCREEN 3: STAFF REVIEW ── */
+  .staff-header {
+    background: var(--ucl-grey-bg);
+    border-bottom: 1px solid var(--ucl-grey-border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+  }
+  .staff-header-title { font-weight: 600; color: var(--ucl-black); font-size: 14px; }
+  .staff-header-meta { color: var(--ucl-grey-text); }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 20px 24px;
+  }
+  @media (max-width: 640px) { .panel-grid { grid-template-columns: 1fr; } }
+
+  .review-panel {
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .review-panel-head {
+    background: var(--ucl-grey-bg);
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ucl-grey-text);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--ucl-grey-border);
+  }
+  .review-panel-body { padding: 14px; }
+  .review-field { margin-bottom: 10px; font-size: 12px; }
+  .review-field-label { color: var(--ucl-grey-text); font-size: 11px; margin-bottom: 2px; }
+  .review-field-value { font-weight: 600; color: var(--ucl-black); }
+  .review-field-value.small { font-weight: normal; font-size: 12px; }
+
+  .risk-flag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .risk-flag.green { background: var(--green-bg); color: var(--green); border: 1px solid #A5D6A7; }
+  .risk-flag.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid #FFCC80; }
+  .risk-flag.red   { background: var(--red-bg); color: var(--red); border: 1px solid #EF9A9A; }
+  .risk-flag-icon { font-size: 16px; }
+
+  .decision-panel {
+    grid-column: span 2;
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  @media (max-width: 640px) { .decision-panel { grid-column: span 1; } }
+  .decision-panel-head {
+    background: var(--ucl-purple);
+    color: white;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .decision-panel-body { padding: 16px; }
+  .decision-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .rationale-field {
+    flex: 1;
+    min-width: 200px;
+  }
+  .auto-field {
+    font-size: 12px;
+    color: var(--ucl-grey-text);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ucl-grey-border);
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .auto-field span { display: block; }
+  .auto-field strong { color: var(--ucl-black); }
+
+  .audit-preview {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--ucl-grey-text);
+    background: var(--ucl-grey-bg);
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    line-height: 1.5;
+  }
+  .integration-note {
+    margin: 12px 24px;
+    padding: 10px 14px;
+    background: var(--ucl-grey-bg);
+    border: 1px solid var(--ucl-grey-border);
+    border-radius: 4px;
+    font-size: 11px;
+    color: var(--ucl-grey-text);
+  }
+
+  /* ── SCREEN 4: AUDIT TRAIL ── */
+  .audit-header-bar {
+    background: var(--ucl-purple);
+    color: white;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .audit-header-bar h2 {
+    font-family: var(--font-main);
+    font-size: 16px;
+    font-weight: normal;
+  }
+  .audit-ready-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.3);
+  }
+  .audit-ready-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #81C784; }
+
+  .audit-fields {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .audit-row {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--ucl-grey-border);
+    padding: 10px 0;
+    font-size: 13px;
+    align-items: flex-start;
+  }
+  .audit-row:first-child { padding-top: 0; }
+  .audit-row-num {
+    width: 28px;
+    color: var(--ucl-grey-text);
+    font-size: 11px;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  .audit-row-label {
+    width: 200px;
+    color: var(--ucl-grey-text);
+    font-size: 12px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .audit-row-value { font-weight: 600; color: var(--ucl-black); line-height: 1.4; }
+  .audit-row-value .sub { font-weight: normal; font-size: 11px; color: var(--ucl-grey-text); display: block; margin-top: 2px; }
+
+  .audit-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--ucl-grey-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+  .audit-meta { font-size: 11px; color: var(--ucl-grey-text); line-height: 1.6; }
+  .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── DIVIDER ── */
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--ucl-grey-border);
+    margin: 20px 0;
+  }
+
+  /* ── FOOTNOTE ── */
+  .spec-note {
+    font-size: 10px;
+    color: #bbb;
+    text-align: center;
+    margin-top: 24px;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+<!-- UCL Top Bar -->
+<div class="ucl-topbar">
+  <span class="ucl-topbar-logo">UCL</span>
+  <div class="ucl-topbar-user">
+    <span>Accessio Access Portal</span>
+    <div class="avatar">AC</div>
+    <span>Alex Chen</span>
+  </div>
+</div>
+
+<!-- Prototype Screen Nav -->
+<div class="proto-nav">
+  <button class="proto-nav-btn active" onclick="showScreen('s1', this)">
+    Screen 1
+    <span class="proto-nav-label">Student Intake</span>
+  </button>
+  <button class="proto-nav-btn" onclick="showScreen('s2', this)">
+    Screen 2
+    <span class="proto-nav-label">Eligibility Check</span>
+  </button>
+  <button class="proto-nav-btn" onclick="showScreen('s3', this)">
+    Screen 3
+    <span class="proto-nav-label">Staff Review</span>
+  </button>
+  <button class="proto-nav-btn" onclick="showScreen('s4', this)">
+    Screen 4
+    <span class="proto-nav-label">Audit Trail</span>
+  </button>
+</div>
+
+<div class="shell">
+
+<!-- ════════════════════════════════════
+     SCREEN 1 — STUDENT INTAKE PORTAL
+     ════════════════════════════════════ -->
+<div class="screen active" id="s1">
+  <div class="card">
+    <div class="card-header">
+      <h2>Request Access to Licensed Software</h2>
+      <p>Complete this form to request access. Your details will be verified automatically.</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar">
+      <div class="progress-step active">
+        <div class="progress-dot">1</div>
+        Submit Request
+      </div>
+      <div class="progress-step">
+        <div class="progress-dot">2</div>
+        Eligibility Check
+      </div>
+      <div class="progress-step">
+        <div class="progress-dot">3</div>
+        Review &amp; Decision
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- SSO Banner -->
+      <div class="sso-banner">
+        <span class="dot"></span>
+        <span>Authenticated via UCL Single Sign-On — Alex Chen · UCL ID 12345678 · MSc Finance Year 1</span>
+      </div>
+
+      <!-- Tool Selection -->
+      <div class="form-group">
+        <label class="form-label">Software Tool <span class="req">*</span></label>
+        <div class="form-hint">Select the licensed tool you are requesting access to.</div>
+        <select>
+          <option value="">— Select tool —</option>
+          <option selected>LSEG Workspace (Refinitiv)</option>
+          <option>Orbis / Bureau van Dijk</option>
+          <option>SPSS Statistics</option>
+          <option>Stata</option>
+          <option>Bloomberg Terminal</option>
+          <option>Other licensed tool</option>
+        </select>
+      </div>
+
+      <!-- Purpose of Use -->
+      <div class="form-group">
+        <label class="form-label">Purpose of Use <span class="req">*</span></label>
+        <div class="form-hint">Select the category that best describes your use. Read each option carefully — your declaration must be accurate.</div>
+        <div class="radio-group" id="purposeGroup">
+          <label class="radio-option selected" onclick="selectPurpose(this, false)">
+            <input type="radio" name="purpose" checked>
+            <div class="radio-option-text">
+              <strong>Dissertation or thesis</strong>
+              <span>Use is directly related to your UCL dissertation, thesis, or research project supervised by a UCL academic.</span>
+            </div>
+          </label>
+          <label class="radio-option" onclick="selectPurpose(this, false)">
+            <input type="radio" name="purpose">
+            <div class="radio-option-text">
+              <strong>Coursework or assessed assignment</strong>
+              <span>Use is required to complete a UCL module assignment, case study, or assessment task.</span>
+            </div>
+          </label>
+          <label class="radio-option" onclick="selectPurpose(this, false)">
+            <input type="radio" name="purpose">
+            <div class="radio-option-text">
+              <strong>Academic research project</strong>
+              <span>Use is for a non-assessed UCL research activity with a named academic supervisor.</span>
+            </div>
+          </label>
+          <label class="radio-option" onclick="selectPurpose(this, true)">
+            <input type="radio" name="purpose">
+            <div class="radio-option-text">
+              <strong>Job interview preparation</strong>
+              <span>Use is to prepare for a recruitment process or job interview at an external organisation.</span>
+            </div>
+          </label>
+          <label class="radio-option" onclick="selectPurpose(this, true)">
+            <input type="radio" name="purpose">
+            <div class="radio-option-text">
+              <strong>Internship or work placement</strong>
+              <span>Use is for tasks related to an internship, work placement, or commercial engagement.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Boundary Alert (shown for commercial categories) -->
+      <div id="boundaryAlert" class="alert alert-amber" style="display:none; margin-bottom:16px;">
+        <span class="alert-icon">⚠</span>
+        <div>
+          <strong>Academic / Commercial Boundary</strong><br>
+          UCL's software licences are granted for academic purposes only. Use for internship tasks or commercial client work is not covered by UCL's licence agreements and may constitute a licence breach. If your use falls into this category, you must declare this below. Please read UCL's Acceptable Use Policy before proceeding.
+        </div>
+      </div>
+
+      <!-- Evidence Upload -->
+      <div class="form-group">
+        <label class="form-label">Supporting Evidence <span class="req">*</span></label>
+        <div class="form-hint">Attach documentation confirming your stated purpose — e.g. module outline, supervisor email, dissertation proposal, or assignment brief.</div>
+        <div class="upload-zone">
+          <div class="upload-icon">📎</div>
+          <div>Click to attach a file, or drag and drop here</div>
+          <div style="font-size:10px; color:#bbb; margin-top:4px;">PDF or image · Max 10MB</div>
+        </div>
+        <div class="alert alert-green" style="margin-top:8px;">
+          <span class="alert-icon">✓</span>
+          <span>dissertation_proposal_chen.pdf attached</span>
+        </div>
+      </div>
+
+      <!-- Free-Text Escape Valve -->
+      <div class="form-group">
+        <label class="form-label">My use doesn't fit any category above — please describe</label>
+        <div class="form-hint">Optional. Use this field if your purpose cannot be accurately described by the categories above.</div>
+        <textarea rows="3" placeholder="Describe your use case in plain terms…"></textarea>
+        <div style="text-align:right; font-size:10px; color:#bbb; margin-top:3px;">0 / 500 characters</div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Compliance Declaration -->
+      <div class="form-group">
+        <label class="form-label">Compliance Declaration <span class="req">*</span></label>
+        <div class="declaration-box">
+          UCL licenses data products and software tools for academic purposes under contractual agreements with vendors. These licences do not extend to commercial use, including use for internship tasks, client work, or employment at external organisations.
+          <div class="checkbox-row">
+            <input type="checkbox" id="decl" checked>
+            <label for="decl">I confirm that my use is for the academic purpose stated above. I understand that providing an inaccurate declaration may result in access being withdrawn and could constitute a breach of UCL's Academic Integrity Policy.</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div style="display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:8px;">
+        <div class="meta-row" style="text-align:left;">Typical review time: <strong>1–2 working days</strong></div>
+        <button class="btn btn-primary" onclick="showScreen('s2', document.querySelectorAll('.proto-nav-btn')[1])">
+          Submit Request →
+        </button>
+      </div>
+
+    </div>
+  </div>
+  <p class="spec-note">Screen 1 — Student Intake Portal · Implements R1–R7 · Accessio MVP2 Prototype</p>
+</div>
+
+
+<!-- ════════════════════════════════════
+     SCREEN 2 — ELIGIBILITY VERIFICATION
+     ════════════════════════════════════ -->
+<div class="screen" id="s2">
+  <div class="card">
+    <div class="card-header">
+      <h2>Request Submitted — Eligibility Check</h2>
+      <p>Your request has been received. Your UCL enrolment status is being verified automatically via Portico.</p>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-bar">
+      <div class="progress-step done">
+        <div class="progress-dot">✓</div>
+        Submit Request
+      </div>
+      <div class="progress-step active">
+        <div class="progress-dot">2</div>
+        Eligibility Check
+      </div>
+      <div class="progress-step">
+        <div class="progress-dot">3</div>
+        Review &amp; Decision
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Reference Number -->
+      <div class="ref-box">
+        <div class="ref-label">Request Reference</div>
+        <div class="ref-number">EDS-2026-00847</div>
+      </div>
+
+      <!-- Eligibility Result -->
+      <div class="eligibility-panel">
+        <div class="elig-header">Portico Eligibility Verification — Real-Time Query</div>
+        <div class="elig-field">
+          <span class="elig-field-label">Programme</span>
+          <span class="elig-field-value">MSc Finance</span>
+        </div>
+        <div class="elig-field">
+          <span class="elig-field-label">Enrolment Status</span>
+          <span class="elig-field-value">
+            <span class="status-badge green"><span class="dot"></span> Active</span>
+          </span>
+        </div>
+        <div class="elig-field">
+          <span class="elig-field-label">Expected End Date</span>
+          <span class="elig-field-value">30 June 2026</span>
+        </div>
+        <div class="elig-field">
+          <span class="elig-field-label">Verified At</span>
+          <span class="elig-field-value" style="font-weight:normal; font-size:12px; color:var(--ucl-grey-text);">14 March 2026 · 09:47:32</span>
+        </div>
+      </div>
+
+      <!-- Eligibility Status -->
+      <div class="alert alert-green">
+        <span class="alert-icon">✓</span>
+        <div>
+          <strong>Eligible — Active enrolment confirmed</strong><br>
+          Your UCL enrolment status has been verified. Your request has been passed to the e-Resources team for review.
+        </div>
+      </div>
+
+      <div class="alert alert-purple" style="margin-top:8px;">
+        <span class="alert-icon">ℹ</span>
+        <div>
+          <strong>What happens next?</strong><br>
+          A librarian will review your request within <strong>1–2 working days</strong>. You will receive an email to your UCL address when a decision has been made. You can track the status of your request using your reference number above.
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Summary of submission -->
+      <div style="font-size:12px; color:var(--ucl-grey-text); margin-bottom:16px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;">Request Summary</div>
+      <div style="font-size:13px; display:grid; grid-template-columns:160px 1fr; gap:8px 12px;">
+        <span style="color:var(--ucl-grey-text);">Tool requested</span><span style="font-weight:600;">LSEG Workspace (Refinitiv)</span>
+        <span style="color:var(--ucl-grey-text);">Purpose declared</span><span style="font-weight:600;">Dissertation or thesis</span>
+        <span style="color:var(--ucl-grey-text);">Evidence attached</span><span style="font-weight:600;">dissertation_proposal_chen.pdf</span>
+        <span style="color:var(--ucl-grey-text);">Declaration confirmed</span><span style="font-weight:600; color:var(--green);">✓ Yes — 14 March 2026, 09:46:11</span>
+      </div>
+
+      <hr class="section-divider">
+
+      <div style="font-size:12px; color:var(--ucl-grey-text); text-align:center;">
+        If your eligibility status looks incorrect, contact <a href="/cdn-cgi/l/email-protection#6b0e46190e18041e19080e182b1e0807450a08451e00" style="color:var(--ucl-purple);"><span class="__cf_email__" data-cfemail="4b2e66392e38243e39282e380b3e2827652a28653e20">[email&#160;protected]</span></a> quoting your reference number.
+      </div>
+    </div>
+  </div>
+  <p class="spec-note">Screen 2 — Eligibility Verification Display · Implements R8–R11 · Real-time read-only Portico query · Accessio MVP2 Prototype</p>
+</div>
+
+
+<!-- ════════════════════════════════════
+     SCREEN 3 — STAFF REVIEW INTERFACE
+     ════════════════════════════════════ -->
+<div class="screen" id="s3">
+  <div class="card">
+
+    <!-- Staff header -->
+    <div class="staff-header">
+      <div>
+        <div class="staff-header-title">Access Request — LSEG Workspace — EDS-2026-00847</div>
+        <div class="staff-header-meta">Submitted 14 March 2026 · 09:47 · Awaiting decision</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:11px; color:var(--ucl-grey-text);">Reviewing as:</span>
+        <span style="font-size:12px; font-weight:600; color:var(--ucl-purple);">S. Gilmour — e-Resources Librarian</span>
+      </div>
+    </div>
+
+    <!-- Four-panel grid -->
+    <div class="panel-grid">
+
+      <!-- Panel 1: Student & Eligibility -->
+      <div class="review-panel">
+        <div class="review-panel-head">Panel 1 — Student &amp; Eligibility</div>
+        <div class="review-panel-body">
+          <div class="review-field">
+            <div class="review-field-label">Student Name</div>
+            <div class="review-field-value">Alex Chen</div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">UCL ID</div>
+            <div class="review-field-value">12345678</div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Programme / Year</div>
+            <div class="review-field-value">MSc Finance · Year 1</div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Portico Enrolment Status</div>
+            <div class="review-field-value"><span class="status-badge green" style="font-size:11px;"><span class="dot"></span> Active</span></div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Expected End Date</div>
+            <div class="review-field-value">30 June 2026</div>
+          </div>
+          <div class="review-field" style="margin-bottom:0;">
+            <div class="review-field-label">Portico Verified At</div>
+            <div class="review-field-value small">14 Mar 2026 · 09:47:32</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Purpose & Evidence -->
+      <div class="review-panel">
+        <div class="review-panel-head">Panel 2 — Purpose &amp; Evidence</div>
+        <div class="review-panel-body">
+          <div class="review-field">
+            <div class="review-field-label">Purpose Declared</div>
+            <div class="review-field-value">Dissertation or thesis</div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Evidence Attached</div>
+            <div class="review-field-value">
+              <a href="#" style="color:var(--ucl-purple); font-size:12px; font-weight:600;">📄 dissertation_proposal_chen.pdf</a>
+              <span class="sub">Uploaded 14 Mar 2026 · PDF</span>
+            </div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Additional Description</div>
+            <div class="review-field-value small" style="color:var(--ucl-grey-text);">None provided</div>
+          </div>
+          <div class="review-field" style="margin-bottom:0;">
+            <div class="review-field-label">Compliance Declaration</div>
+            <div class="review-field-value" style="color:var(--green);">✓ Confirmed
+              <span class="sub">14 Mar 2026 · 09:46:11</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Risk Assessment -->
+      <div class="review-panel">
+        <div class="review-panel-head">Panel 3 — Risk Assessment</div>
+        <div class="review-panel-body">
+          <div class="risk-flag green">
+            <span class="risk-flag-icon">✓</span>
+            <span>Green — Standard Academic Use</span>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Flag Rationale</div>
+            <div class="review-field-value small">Dissertation purpose with supporting evidence attached. No commercial indicators present. Standard academic use.</div>
+          </div>
+          <div class="review-field">
+            <div class="review-field-label">Compliance Layer</div>
+            <div class="review-field-value"><span class="status-badge green" style="font-size:11px;"><span class="dot"></span> UCL Academic Policy</span></div>
+          </div>
+          <div class="review-field" style="margin-bottom:0;">
+            <div class="review-field-label">Suggested Decision Criteria</div>
+            <div class="review-field-value small">Verify evidence matches declared purpose. Check supervisor name matches UCL faculty records if provided. No further checks required for standard academic use.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4: Decision -->
+      <div class="review-panel">
+        <div class="review-panel-head">Panel 4 — Decision</div>
+        <div class="review-panel-body">
+          <div class="review-field">
+            <div class="review-field-label">Decision Rationale <span class="req">*</span></div>
+            <textarea rows="3" placeholder="State the basis for your decision — this will form part of the permanent audit record. Minimum 20 characters." style="font-size:12px; margin-top:4px;">Student has provided dissertation proposal as evidence. Purpose consistent with declared academic use. Eligibility confirmed via Portico.</textarea>
+          </div>
+          <div class="decision-row" style="margin-top:12px;">
+            <button class="btn btn-approve">✓ Approve</button>
+            <button class="btn btn-reject">✗ Reject</button>
+          </div>
+          <div class="auto-field">
+            <div>
+              <span>Approving Staff</span>
+              <strong>S. Gilmour (UCL ID 87654321)</strong>
+            </div>
+            <div>
+              <span>Auto-populated — not editable</span>
+              <strong>UCL SSO</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Preview (full width) -->
+      <div class="decision-panel">
+        <div class="decision-panel-head">Audit Trail Preview — What will be recorded on decision</div>
+        <div class="decision-panel-body">
+          <div class="audit-preview">
+            Student UCL ID: 12345678 · Tool: LSEG Workspace · Purpose: Dissertation · Evidence: dissertation_proposal_chen.pdf · Declaration confirmed: 14/03/2026 09:46 · Eligibility: Active enrolment verified via Portico 14/03/2026 09:47 · Decision: [Pending] · Rationale: [As entered above] · Approving staff: S. Gilmour (87654321) · Timestamp: [On confirmation]
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Integration Note -->
+    <div class="integration-note">
+      ℹ On confirmation, this decision will be logged in <strong>TopDesk</strong> as ticket <strong>TDK-2026-04421</strong> and the student will be notified automatically.
+    </div>
+
+  </div>
+  <p class="spec-note">Screen 3 — Staff Review Interface · Implements R12–R15 · Enriched ticket, human approval preserved (R14), compliance layer indicator · Accessio MVP2 Prototype</p>
+</div>
+
+
+<!-- ════════════════════════════════════
+     SCREEN 4 — AUDIT TRAIL OUTPUT
+     ════════════════════════════════════ -->
+<div class="screen" id="s4">
+  <div class="card">
+
+    <!-- Audit Header -->
+    <div class="audit-header-bar">
+      <h2>Audit Record — LSEG Workspace — EDS-2026-00847</h2>
+      <div class="audit-ready-badge">
+        <span class="dot"></span>
+        Complete — Audit Ready
+      </div>
+    </div>
+
+    <!-- Decision summary bar -->
+    <div style="background:var(--green-bg); border-bottom:1px solid #A5D6A7; padding:12px 24px; display:flex; align-items:center; gap:12px;">
+      <span style="font-size:18px;">✓</span>
+      <div style="font-size:13px;">
+        <strong style="color:var(--green);">Approved</strong>
+        <span style="color:var(--ucl-grey-text); margin-left:12px; font-size:12px;">Decision recorded 14 March 2026 · 14:23:07 · Approved by S. Gilmour</span>
+      </div>
+    </div>
+
+    <!-- Eight structured fields -->
+    <div class="audit-fields">
+
+      <div class="audit-row">
+        <div class="audit-row-num">1</div>
+        <div class="audit-row-label">Student UCL ID</div>
+        <div class="audit-row-value">12345678
+          <span class="sub">Alex Chen · MSc Finance · Year 1</span>
+        </div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">2</div>
+        <div class="audit-row-label">Tool Requested</div>
+        <div class="audit-row-value">LSEG Workspace (Refinitiv)</div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">3</div>
+        <div class="audit-row-label">Purpose-of-Use Declared</div>
+        <div class="audit-row-value">Dissertation or thesis
+          <span class="sub">Category selected by student at intake · 14 Mar 2026, 09:45:02</span>
+        </div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">4</div>
+        <div class="audit-row-label">Evidence Provided</div>
+        <div class="audit-row-value">Yes — dissertation_proposal_chen.pdf
+          <span class="sub">PDF · Uploaded 14 Mar 2026, 09:45:38 · File reference: ATT-00847-001</span>
+        </div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">5</div>
+        <div class="audit-row-label">Compliance Declaration</div>
+        <div class="audit-row-value" style="color:var(--green);">Confirmed ✓
+          <span class="sub" style="color:var(--ucl-grey-text);">Checkbox confirmed by student · 14 Mar 2026, 09:46:11</span>
+        </div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">6</div>
+        <div class="audit-row-label">Eligibility Verification</div>
+        <div class="audit-row-value">Active enrolment confirmed via Portico
+          <span class="sub">Programme: MSc Finance · Enrolment: Active · End date: 30 Jun 2026 · Verified 14 Mar 2026, 09:47:32 · Read-only query — no data stored</span>
+        </div>
+      </div>
+
+      <div class="audit-row">
+        <div class="audit-row-num">7</div>
+        <div class="audit-row-label">Decision</div>
+        <div class="audit-row-value" style="color:var(--green);">Approved
+          <span class="sub" style="color:var(--ucl-grey-text);">"Student has provided dissertation proposal as evidence. Purpose consistent with declared academic use. Eligibility confirmed via Portico."</span>
+        </div>
+      </div>
+
+      <div class="audit-row" style="border-bottom:none;">
+        <div class="audit-row-num">8</div>
+        <div class="audit-row-label">Approving Staff Member</div>
+        <div class="audit-row-value">S. Gilmour — e-Resources Librarian
+          <span class="sub">UCL ID 87654321 · Auto-populated via UCL SSO · Decision timestamp: 14 Mar 2026, 14:23:07</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="audit-footer">
+      <div class="audit-meta">
+        <div><strong>Retention period:</strong> This record will be retained for <strong>7 years</strong> in accordance with UCL data retention policy</div>
+        <div style="margin-top:4px;"><strong>Access permissions:</strong> e-Resources Team · Information Governance · Library Services Director</div>
+        <div style="margin-top:4px; color:#bbb; font-size:10px;">Record ID: AUD-2026-00847 · Generated automatically at point of decision · Tamper-evident</div>
+      </div>
+      <div class="export-btns">
+        <button class="btn btn-export">↓ Export as PDF</button>
+        <button class="btn btn-export">↓ Export as CSV</button>
+      </div>
+    </div>
+
+  </div>
+  <p class="spec-note">Screen 4 — Audit Trail Output · Implements R16–R18 · Eight structured fields · Automated generation · Export-ready for vendor audit response · Accessio MVP2 Prototype</p>
+</div>
+
+</div><!-- /shell -->
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function showScreen(id, btn) {
+  // Hide all screens
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  // Deactivate all nav buttons
+  document.querySelectorAll('.proto-nav-btn').forEach(b => b.classList.remove('active'));
+  // Show target screen
+  document.getElementById(id).classList.add('active');
+  // Activate button
+  btn.classList.add('active');
+  // Scroll to top
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function selectPurpose(el, isCommercial) {
+  // Update selection styles
+  document.querySelectorAll('.radio-option').f
